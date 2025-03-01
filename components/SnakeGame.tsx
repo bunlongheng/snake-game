@@ -85,16 +85,44 @@ const SnakeGame: React.FC = () => {
     }
   }, [gameState]);
 
+  const decideDirection = useCallback(() => {
+    const head = gameState.snake[0];
+    const directions = [
+      { x: 0, y: -gridSize }, // Up
+      { x: 0, y: gridSize },  // Down
+      { x: -gridSize, y: 0 }, // Left
+      { x: gridSize, y: 0 }   // Right
+    ];
+
+    let bestDirection = gameState.direction;
+    let bestScore = -Infinity;
+
+    directions.forEach(dir => {
+      const newHead = { x: head.x + dir.x, y: head.y + dir.y };
+      if (!checkCollision(newHead)) {
+        const distanceToFood = Math.abs(newHead.x - gameState.food.x) + Math.abs(newHead.y - gameState.food.y);
+        const score = -distanceToFood; // Lower distance is better
+        if (score > bestScore) {
+          bestScore = score;
+          bestDirection = dir;
+        }
+      }
+    });
+
+    setGameState(prev => ({ ...prev, direction: bestDirection, thoughts: "Thinking about the next move..." }));
+  }, [gameState, checkCollision]);
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (gameState.gameRunning) {
       timer = setInterval(() => {
+        decideDirection();
         moveSnake();
         draw();
       }, 100);
     }
     return () => clearInterval(timer);
-  }, [gameState.gameRunning, moveSnake, draw]);
+  }, [gameState.gameRunning, moveSnake, draw, decideDirection]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900">
