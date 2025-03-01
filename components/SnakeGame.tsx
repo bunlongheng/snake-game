@@ -29,18 +29,27 @@ const SnakeGame: React.FC = () => {
     thoughts: "Click 'Start Game' to begin."
   });
 
-  const checkCollision = (head: Point) => {
-    return head.x < 0 || head.x >= gridWidth || head.y < 0 || head.y >= gridHeight || gameState.snake.some(segment => head.x === segment.x && head.y === segment.y);
-  };
+  const checkCollision = useCallback((point: Point) => {
+    return (
+      point.x < 0 ||
+      point.x >= gridWidth ||
+      point.y < 0 ||
+      point.y >= gridHeight ||
+      gameState.snake.some(segment => point.x === segment.x && point.y === segment.y)
+    );
+  }, [gameState.snake]);
 
   const moveSnake = useCallback(() => {
     const head = { x: gameState.snake[0].x + gameState.direction.x, y: gameState.snake[0].y + gameState.direction.y };
+
     if (checkCollision(head)) {
       setGameState(prev => ({ ...prev, gameRunning: false, thoughts: "Crashed! Game over." }));
       return;
     }
-    const newSnake = [...gameState.snake];
+
+    let newSnake = [...gameState.snake];
     newSnake.unshift(head);
+
     if (head.x === gameState.food.x && head.y === gameState.food.y) {
       placeFood();
       setGameState(prev => ({ ...prev, snake: newSnake, thoughts: "Found food! Searching for more..." }));
@@ -48,16 +57,18 @@ const SnakeGame: React.FC = () => {
       newSnake.pop();
       setGameState(prev => ({ ...prev, snake: newSnake }));
     }
-  }, [gameState]);
+  }, [gameState, checkCollision]);
 
-  const placeFood = () => {
-    let x, y;
+  const placeFood = useCallback(() => {
+    let newFood;
     do {
-      x = Math.floor(Math.random() * (gridWidth / gridSize)) * gridSize;
-      y = Math.floor(Math.random() * (gridHeight / gridSize)) * gridSize;
-    } while (gameState.snake.some(segment => segment.x === x && segment.y === y));
-    setGameState(prev => ({ ...prev, food: { x, y } }));
-  };
+      newFood = {
+        x: Math.floor(Math.random() * (gridWidth / gridSize)) * gridSize,
+        y: Math.floor(Math.random() * (gridHeight / gridSize)) * gridSize,
+      };
+    } while (checkCollision(newFood));
+    setGameState(prev => ({ ...prev, food: newFood }));
+  }, [checkCollision]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
